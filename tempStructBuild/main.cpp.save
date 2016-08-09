@@ -1,0 +1,307 @@
+#include <iostream>
+#include <cstdlib>
+#include <time.h>
+#include <cstdio>
+#include <assert.h>
+#define VERYHIGHTEMPERATURE 200
+#define VERYLOWTEMPERATURE -200
+#define minValidtemp  -50
+#define maxValidtemp  50
+#define MAXSENSORS 10
+//#define OutputDebug =1
+
+using namespace std;
+typedef uint8_t byte;
+
+//create a 64bit value to hold a one wire address, but leave access to high and low byte
+//running into endian problems?
+union OneWireAddress
+{
+    uint64_t ow_address_64;
+    uint32_t ow_address_32[2];
+    uint8_t ow_address_byte[8];
+};
+struct Temp_Struct
+{
+private:
+    const char preamble[2] = {'T','P'}; //TP = temperature probe, no space.
+    OneWireAddress ow_add[MAXSENSORS]; // array of MAXSENSORS 64bit addresses
+    float temps[MAXSENSORS];// array of temps
+    float maxTemps[MAXSENSORS]; // max temp for each sensor
+    int32_t maxReadTime[MAXSENSORS]; //time of last max reading
+    float minTemps[MAXSENSORS]; // min temp for each sensor
+    int32_t minReadTime[MAXSENSORS]; //time of last min reading
+    uint8_t sensor_status[MAXSENSORS]; // status byte, not sure of the values yet
+
+public:
+    char label[MAXSENSORS][5]; //quick access to label for printing
+    Temp_Struct();
+    int set_ID(OneWireAddress); // set Id from reading of address label
+    OneWireAddress get_ID(int) const; // read lable to idenfiy which sensor
+	int find_ID(OneWireAddress) const; //find index of crrent oneWireaddress, return -1 if not found (new)
+	bool checkValidAddress(OneWireAddress) const;
+    bool del_Id(int);
+    bool del_Id(OneWireAddress);
+    void set_temp(OneWireAddress,float); //set current temp, also set min and maxreturn index number
+    float get_temp(OneWireAddress) const; //read current temp for display
+    //void set_status(); // set status byte with relevant bit.
+    uint8_t get_status(OneWireAddress) const; // read status byte for display
+    float getMaxTemp(OneWireAddress) const;
+    uint32_t getMaxTime(OneWireAddress) const;
+    float getMinTemp(OneWireAddress) const;
+    uint32_t getMinTime(OneWireAddress) const;
+
+    //Temp_Struct(); // initialise mins and max
+
+
+};
+//Function prototypes:
+void DS18_RandAddValid (uint32_t& HighVal, uint32_t& LowVal);
+uint8_t crc8(uint8_t *addr, uint8_t len);
+
+int main()
+{
+    Temp_Struct Sensors1;
+    //******* unit Testing *******/////
+    srand ( (unsigned) (time(0)));
+    //const char LabelList[9][7] = {"Room","First","Scnd","Third","Fourth","Sixth","Svnth","Eighth"};
+    //uint32_t HAddr, LAddr;
+    OneWireAddress TempAddresses[MAXSENSORS];
+    float randomTemp[MAXSENSORS];
+    for (int i = 0; i < MAXSENSORS; i++) //initialise array
+    {
+        DS18_RandAddValid(TempAddresses[i].ow_address_32[1],TempAddresses[i].ow_address_32[0]);
+        //cout << "OneWireadress: " << TempAddresses[i].ow_address_64  << endl;
+       // printf("OneWireAddress64 %llx\n",TempAddresses[i].ow_address_64);
+        randomTemp[i] = 1.0 +  8 * (float)( rand())/ (float) RAND_MAX;
+        //printf("OneWireAddress32 %x %x\n",TempAddresses[i].ow_address_32[1],TempAddresses[i].ow_address_32[0]);
+        //printf("OneWireAddress8 ");
+        //for(int j = 0; j < 8; j++)
+        //{
+        //   printf(" %x", TempAddresses[i].ow_address_byte[7-j]); // to fix endian problems.
+        //}
+        printf("\n");
+        //cout << "temp for probe " << i << " " << randomTemp[i] << " C\n"<< endl;
+        //cout << TempAddresses[i].ow_address_64 << endl;
+        Sensors1.set_ID(TempAddresses[i]);
+
+    }
+    for (int i = 0; i < 20; i++) //set temp for array by searching.
+	{
+		float randomTemp = 1.0 +  8 * (float)( rand())/ (float) RAND_MAX;
+		int randSensor = rand() % 10;
+
+		//int n_sensorIdx =0;
+		Sensors1.set_temp(TempAddresses[randSensor], randomTemp); //get new index
+		float storedTemp = Sensors1.get_temp(TempAddresses[randSensor]);
+		printf("Index: %d temp: %f idx: %llx StoredTemp: %f\n", randSensor ,randomTemp, TempAddresses[randSensor].ow_address_64,storedTemp); //output to screen
+
+	}
+
+//    for(uint8_t i =0 ; i <9 ; i++)
+//    {
+//        DS18_RandAddValid(HAddr,LAddr);
+//        OneWireStructArray[i].addressHigh = HAddr;
+//        OneWireStructArray[i].addressLow = LAddr;
+//        printf("FinalValues %04x %04x\n",HAddr,LAddr );
+//        OneWireStructArray[i].Temperature = 1.0 +  8 * (float)( rand())/ (float) RAND_MAX;
+//        //float NewVal = 1.0 +  8 * (float)( rand())/ (float) RAND_MAX;
+//        //cout << NewVal << endl;
+//    }
+
+
+    //cout << "Hello world!" << endl;
+
+	//time_t nowTime = time(NULL);
+	cout << time(NULL) <<endl;
+	//while ((time(NULL) - nowTime) >10)
+
+    return 0;
+}
+
+/***************
+FUNCTION:DS18_RandAddValid
+ARG:
+PURPOSE:generate  semi random address for use with struct
+RESOURCES:
+RETURN:change actua
+TODO:
+NOTES:
+****************/
+void DS18_RandAddValid (uint32_t& HighVal, uint32_t& LowVal)
+{
+// structure of one wire bus is
+//LSByte = type of device
+//MSByte = CRC8
+//address[0] = 0x10 for ds18b20
+//address[7] = CRC8
+    uint8_t OneWireAdd[8];
+    OneWireAdd[0]= 0x10; // set value for DS18b20
+	//printf("byte 0 %x", OneWireAdd[0])
+    for (int i = 1; i < 7; i++)
+    {
+        OneWireAdd[i] = rand();
+    }
+    OneWireAdd[7] = crc8(OneWireAdd,7);
+
+    //cout << " valid address: ";
+    //cout << endl;
+    HighVal = (OneWireAdd[0] << 24) + (OneWireAdd[1] << 16) + (OneWireAdd[2] << 8) + OneWireAdd[3];
+    LowVal = (OneWireAdd[4] << 24) + (OneWireAdd[5] << 16) + (OneWireAdd[6] << 8) + OneWireAdd[7];
+    //printf("high and low byte %x %x \n", HighVal, LowVal);
+}
+/***************
+FUNCTION:crc8
+ARG: pointer to byte array, length of byte array
+PURPOSE:Calculate CRC8 for an array of bytes of length len
+RESOURCES:
+RETURN:return CRC8 as uint8_t
+TODO:
+NOTES:taken from onewire library
+****************/
+uint8_t crc8(uint8_t *addr, uint8_t len)
+{
+	uint8_t crc = 0;
+	while (len--)
+	{
+		uint8_t inbyte = *addr++;
+		for (uint8_t i = 8; i; i--)
+		{
+			uint8_t mix = (crc ^ inbyte) & 0x01;
+			crc >>= 1;
+			if (mix) crc ^= 0x8C;
+                inbyte >>= 1;
+		}
+	}
+	return crc;
+}
+
+
+
+Temp_Struct::Temp_Struct()
+{
+    //setup and initialise Temp_Struct.
+    for (int i = 0; i <MAXSENSORS; i++)
+    {
+        maxTemps[i] = VERYLOWTEMPERATURE; //reset minimum and maximum
+        minTemps[i] = VERYHIGHTEMPERATURE;
+        maxReadTime[i] = minReadTime[i] = ow_add[i].ow_address_64 = 0;
+        sensor_status[i] = 0;
+    }
+}
+
+int Temp_Struct::set_ID(OneWireAddress inputID) // return index of sensor
+{
+	static int indexCount = 0;
+	while (indexCount <MAXSENSORS)
+	{
+		if (ow_add[indexCount].ow_address_64 == 0 )
+		{
+			ow_add[indexCount].ow_address_64 =inputID.ow_address_64;
+			//cout << " " << indexCount << " value: " <<  ow_add[indexCount].ow_address_64 << endl;
+			printf("zero address: %d value: %llx\n", indexCount,ow_add[indexCount].ow_address_64);
+			indexCount++;
+			return indexCount;
+		}
+		else if (ow_add[indexCount].ow_address_64 != inputID.ow_address_64)
+		{
+			ow_add[indexCount].ow_address_64 =inputID.ow_address_64;
+			//cout << "found non-duplicate address " << indexCount << " value: " <<  ow_add[indexCount].ow_address_64 << endl;
+			printf("found non-duplicate address:  %d value: %llx\n", indexCount,ow_add[indexCount].ow_address_64);
+			indexCount++;
+			return indexCount;
+		}
+		indexCount++;
+		return -1;
+	}
+
+} // set Id from reading of address label
+OneWireAddress Temp_Struct::get_ID(int idIdx) const
+{
+	return ow_add[idIdx];
+} // read lable to idenfiy which sensor
+void Temp_Struct::set_temp(OneWireAddress inputID,float inputTemp)
+{
+    int sensor_resolve =0;
+    int indexCount = 0;
+    while (indexCount < MAXSENSORS)
+    {
+        if (inputID.ow_address_64 == ow_add[indexCount].ow_address_64) //go through list
+        {
+            sensor_resolve = indexCount;
+            if (inputTemp < maxValidtemp || inputTemp > minValidtemp)
+            {
+                temps[indexCount] = inputTemp;
+                cout << "Input Temp:" << inputTemp <<" storedTemp:" << temps[indexCount] << endl;
+            }
+            else
+            {
+                temps[indexCount] = maxValidtemp; //sentinel value is highest temp
+            }
+			//cout <<"Index count" << indexCount << endl;
+            return ;//indexCount++; //exit while loop and return
+        }
+        indexCount++;
+    }
+    if (indexCount == MAXSENSORS ) //no valid ID found
+    {
+        int newSensor = Temp_Struct::set_ID(inputID);
+        if (newSensor < MAXSENSORS)
+        {
+            temps[newSensor] = inputTemp;
+
+            //cout <<"New Sensor" <<newSensor << endl;
+            return; // newSensor;
+
+        }
+
+    }
+    //cout << indexCount << endl;
+    //return -1;
+
+} //set current temp, also set min and max
+float Temp_Struct::get_temp(OneWireAddress inputID) const
+{
+	int indexCount = 0;
+
+    while (indexCount < MAXSENSORS)
+	{
+		//printf("inputIDX: %11x storedIDX: %11x\n",inputID.ow_address_64,ow_add[indexCount].ow_address_64);
+		if (inputID.ow_address_64 == ow_add[indexCount].ow_address_64)
+		{
+			printf("Current ID: %11x IndexCount: %d Temp: %f\n", inputID.ow_address_64, indexCount, );
+			
+			//cout << "current index temp "<< indexCount << endl;
+			return (temps[indexCount]);
+		}
+		//printf("index ------ %d\n", indexCount);
+		indexCount++;
+	}
+
+	return -100.0;
+
+} //read current temp for display
+
+    //void set_status(); // set status byte with relevant bit.
+uint8_t Temp_Struct::get_status(OneWireAddress) const
+{
+	return 0;
+} // read status byte for display
+
+float Temp_Struct::getMaxTemp(OneWireAddress) const
+{
+	return 0.0;
+}
+uint32_t Temp_Struct::getMaxTime(OneWireAddress) const
+{
+	return 0;
+}
+
+float Temp_Struct::getMinTemp(OneWireAddress) const
+{
+	return 0.0;
+}
+uint32_t Temp_Struct::getMinTime(OneWireAddress) const
+{
+	return 0;
+}

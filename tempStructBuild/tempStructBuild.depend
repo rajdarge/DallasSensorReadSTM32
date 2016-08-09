@@ -1,0 +1,75 @@
+# depslib dependency file v1.0
+1467619359 source:f:\cpluspluslearning\codeblocks\tempstructbuild\main.cpp
+	<iostream>
+	<cstdlib>
+	<time.h>
+	<cstdio>
+	<assert.h>
+
+1466640901 source:f:\cpluspluslearning\codeblocks\tempstructbuild\properties.rc
+	<windows.h>
+
+1467869929 source:c:\users\user\documents\cplusplus\tempstructbuild\main.cpp
+	<iostream>
+	<cstdlib>
+	<time.h>
+	<cstdio>
+	<assert.h>
+	<cstring>
+
+1466640901 source:c:\users\user\documents\cplusplus\tempstructbuild\properties.rc
+	<windows.h>
+
+1466640901 source:c:\users\mhh\documents\codeblocks\tempstructbuild\properties.rc
+	<windows.h>
+
+1470556772 source:c:\users\mhh\documents\codeblocks\tempstructbuild\main.cpp
+	<iostream>
+	<cstdlib>
+	<time.h>
+	<cstdio>
+	<assert.h>
+	<cstring>
+	"OneWireAddress.h"
+	"SensorData.h"
+	"NameMinMaxAveBreachVals.h"
+
+1470556760 c:\users\mhh\documents\codeblocks\tempstructbuild\include\onewireaddress.h
+
+1470556811 c:\users\mhh\documents\codeblocks\tempstructbuild\include\sensordata.h
+
+1470556811 c:\users\mhh\documents\codeblocks\tempstructbuild\include\nameminmaxavebreachvals.h
+
+1470555905 source:c:\users\mhh\documents\codeblocks\tempstructbuild\src\nameminmaxavebreachvals.cpp
+	<iostream>
+	<cstdlib>
+	<time.h>
+	<cstdio>
+	<assert.h>
+	<cstring>
+	"OneWireAddress.h"
+	"SensorData.h"
+	"NameMinMaxAveBreachVals.h"
+
+1470556628 source:c:\users\mhh\documents\codeblocks\tempstructbuild\src\onewireaddress.cpp
+	<iostream>
+	<cstdlib>
+	<time.h>
+	<cstdio>
+	<assert.h>
+	<cstring>
+	"OneWireAddress.h"
+	"SensorData.h"
+	"NameMinMaxAveBreachVals.h"
+
+1470556152 source:c:\users\mhh\documents\codeblocks\tempstructbuild\src\sensordata.cpp
+	<iostream>
+	<cstdlib>
+	<time.h>
+	<cstdio>
+	<assert.h>
+	<cstring>
+	"OneWireAddress.h"
+	"SensorData.h"
+	"NameMinMaxAveBreachVals.h"
+
